@@ -1,7 +1,7 @@
 ---
-title: "Caso 4. Arbol de Regresión. Datos Advertising"
+title: "Arbol de regresión con datos Advertising"
 author: "Rubén Pizarro Gurrola"
-date: "17/3/2022"
+date: "`r Sys.Date()`"
 output: 
   html_document:
     code_folding: hide
@@ -14,44 +14,41 @@ bibliography: references.bib
 
 # Objetivo
 
-Construir y evaluar un modelo de árbol de regresión para realizar predicciones y comparar resultados con el modelo de regresión lineal múltiple
+Crear y evaluar un modelo de árbol de regresión para predecir las ventas con datos simulados de una empresa dependiendo de las inversiones realizadas en publicidad.
 
 # Descripción
 
--   Se cargan las librerías necesarias
+-   Cargar librerías y datos
+-   Limpiar datos si es necesario
+-   Explorar datos
+-   Partir los datos en datos de entrenamiento y datos de validación 70% y 30%
+-   Crear modelo de árbol de regresión con los datos de entrenamiento
+-   Hacer Predicciones con datos de validación
+-   Evaluar predicciones 
+-   Determinar el estadístico *rmse* para evaluar con respecto a otros modelos
+-   Interpretar el caso
 
--   Se cargan los datos Se exploran los datos
-
--   Se crear los datos de entrenamiento y validación 70% y 30% respectivamente
-
-Las métricas a valorar serán:
-
--   Que los coeficientes sean estadísticamente significativos por encima del 95%.
-
--   *R Squared Ajustado* el modelo se acepta si sobrepasa en el 80%
-
--   *rmse* comparado con otro modelo mismos datos se acepta o se establece que un modelo es mejor que otro.
-
--   Comparaciones con el modelo de regresión lineak múltiple
-
-# Marco teórico
+# Fundamento teórico
 
 Los algoritmos de aprendizaje basados en árbol se consideran uno de los mejores y más utilizados métodos de aprendizaje supervisado. Potencian modelos predictivos con alta precisión, estabilidad y facilidad de interpretación.
 
-Los árboles de clasificación y regresión son métodos que proporcionan modelos que satisfacen objetivos tanto predictivos como explicativos.
+Los árboles de clasificación y **regresión** son métodos que proporcionan modelos que satisfacen objetivos tanto predictivos como explicativos.
 
-Dos de los puntos fuertes de este método son, por un lado, la sencilla representación gráfica mediante árboles y, por otro, el formato compacto de las reglas de lenguaje natural.
+Algunas ventajas son su sencillez y la representación gráfica mediante árboles y, por otro, la definición de reglas de asociación entre variables que incluye expresiones de condición que permiten explicar las predicciones.
 
-Se distinguen dos casos en que estas técnicas de modelado deben utilizarse: - Utilizar árboles de clasificación para explicar y predecir la pertenencia de los objetos (observaciones, individuos) a una clase, sobre la base de variables explicativas cuantitativas y cualitativas.
+Se pueden usar para regresiones con variables dependientes que tienen valores numéricos continuos o para clasificaciones con variables categóricas.
 
-Utilizar un árbol de regresión para crear un modelo explicativo y predictivo para una variable cuantitativa dependiente basada en variables explicativas independientes cuantitativas y cualitativas.
+Utilizar un árbol de regresión para crear un modelo explicativo y predictivo para una variable cuantitativa dependiente basada en variables explicativas independientes cuantitativas y cualitativas [@xlstatbyaddinsoft].
+
+Un árbol de regresión consiste en hacer preguntas de tipo $¿x_k < c?$ para cada una de las covariables, de esta forma el espacio de las covariables es divido en hiper-rectángulos (con el resultado de las condicionales) de las observaciones que queden dentro de un hiper-rectángulo tendrán el mismo valor estimado $\hat{y}$ o $Y$ .[@hernández2021]
+
+Por otra parte, bajo el paradigma divide y vencerás, usando árboles de regresión y decisión y correspondientes reglas, el árbol representa el modelo similar a un diagrama de flujo en el que los nodos de decisión, los nodos de hoja y las ramas definen una serie de decisiones que se pueden usar para generar predicciones. Siguiendo las reglas se encuentran predicciones en la hoja final. [@lantz2013].
 
 # Desarrollo
 
 ## Cargar librerías
 
 ```{r message=FALSE, warning=FALSE}
-
 library(readr) # Para importar datos
 library(dplyr) # Para filtrar   
 library(knitr) # Para datos tabulares
@@ -67,27 +64,27 @@ library(rpart.plot) # Para árbol
 ## Cargar datos
 
 ```{r}
-datos <- read.csv("https://raw.githubusercontent.com/rpizarrog/Analisis-Inteligente-de-datos/main/datos/Advertising.csv")
+datos <- read.csv("https://raw.githubusercontent.com/rpizarrog/Analisis-Inteligente-de-datos/main/datos/Advertising_Web.csv")
 ```
 
-## Explorando los datos
-
-```{r}
-summary(datos)
-str(datos)
-```
+## Explorar datos
 
 Son 200 registros tres variables independientes y una variable dependiente.
 
-La variable dependiente o variable objetivo es *Sales* que deberá estar en función de la inversión que se hace en *TV*, *Radio* o *Newspaper*.
-
-## Limpiar datos
-
-Quitar la variable x que no es de interés
+La variable dependiente o variable objetivo es *Sales* que deberá estar en función de la inversión que se hace en *TV, Radio, Newspaper* o *Web*.
 
 ```{r}
-datos <- datos %>%
-  select (TV, Radio, Newspaper, Sales)
+str(datos)
+summary(datos)
+```
+
+### Limpiar datos
+
+Quitar las primeras columnas
+
+```{r}
+datos <- select(datos, TV, Radio, Newspaper, Web, Sales)
+
 ```
 
 ### head(datos)
@@ -213,7 +210,9 @@ $$
 
 Cuanto mayor sea el *rmse*, mayor será la diferencia entre los valores predichos y reales, lo que significa que peor se ajusta un modelo de regresión a los datos. Por el contrario, cuanto más pequeño sea el *rmse*, mejor podrá un modelo ajustar los datos.
 
-Se compara este valor de *rmse* con respecto al modelo de regresión múltiple que fue de 1.590948 y este modelo de árbol de regresión se obtiene un valor de *rmse* de 1.455681, por lo tanto bajo este criterio el modelo de árbol de regresión es mejor comparado con el modelo de regresión múltiple.
+Se compara este valor de *rmse* con respecto al modelo de regresión múltiple
+
+Con este modelo de árbol de regresión, los mismos datos, mismas particiones se tuvo un valor de 1.455681 por lo que se puede interpretar que este modelo de regresión fué mejor con respecto a la métrica *rmse* con respecto al modelo de regresión múltiple que tuvo un valor de 1.543975.
 
 ```{r}
 rmse <- rmse(actual = comparaciones$Sales, predicted = comparaciones$predicciones)
@@ -245,10 +244,8 @@ Y.predicciones <- predict(object = modelo_ar, newdata = nuevos)
 Y.predicciones
 ```
 
-# Interpretación 
-
-Comentarios pesonal acerca del caso
-
-# Bibliografía
+# Interpretación
 
 Pendiente
+
+# Bibliografía
