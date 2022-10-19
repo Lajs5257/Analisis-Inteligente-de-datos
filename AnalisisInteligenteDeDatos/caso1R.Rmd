@@ -1,0 +1,324 @@
+---
+title: "Caso 1. Regresión Lineal Simple. Peso EstaTura datos FIFA"
+author: "Luis Alberto Jiménez Soto"
+date: "28/9/2022"
+output: 
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: true
+    toc_depth: 6
+    number_sections: yes
+---
+
+# Objetivo
+
+Construir y evaluar un modelo de regresión lineal simple para realizar predicciones de peso de jugadores de fútbol con los datos de FIFA de acuerdo a la variable estatura
+
+# Descripción
+
+-   Cargar librerías
+
+-   Cargar datos
+
+-   Seleccionar variables de estudio estatura y peso
+
+-   Crear datos de entrenamiento y datos de validación
+
+-   Construir el modelo de regresión lineal simple
+
+-   Realizar predicciones con los datos validación
+
+-   Realizar predicciones con datos nuevos
+
+-   Evaluar el modelo
+
+-   Interpretación del caso
+
+# Desarrollo
+
+## Cargar librerías
+
+```{r message=FALSE, warning=FALSE}
+library(readr) # Para importar datos
+library(dplyr) # Para filtrar   
+library(knitr) # Para datos tabulares
+library(ggplot2) # Para visualizar
+library(plotly)
+library(caret)  # Para particionar
+library(Metrics) # Para determinar rmse 
+```
+
+## Cargar datos
+
+```{r}
+datos <- read.csv("https://raw.githubusercontent.com/rpizarrog/Analisis-Inteligente-de-datos/main/datos/datos.FIFA.limpios.csv", stringsAsFactors = TRUE)
+```
+
+Explorar datos
+
+```{r}
+str(datos)
+```
+
+```{r}
+print("Estatura")
+summary(datos$Estatura)
+print("Peso")
+summary(datos$PesoKgs)
+```
+
+## Limpiar datos
+
+Se detectaron 48 registros con valores NA por lo cual se quitan del conjunto de datos ya que solo representan tan solo el 0.26% o sea menos del 1%.
+
+```{r}
+datos.limpios <- subset(datos, !is.na(Estatura))
+```
+
+## Partir datos
+
+Se identifica el numero de observaciones n *y se* siembra la semilla a 2022 para construir los mismos valores aleatorios por la función *createDataPartition().*
+
+```{r}
+n <- nrow(datos.limpios)
+# Modificar la semilla estableciendo como par´metro los útimos cuatro dígitos de su no de control. 
+# Ej. set.seed(0732), o set.seed(1023)
+# set.seed(2022) 
+set.seed(1271)
+```
+
+De manera aleatoria se construyen los datos de entrenamiento y los datos de validación.
+
+En la variable *entrena* se generan los registros que van a ser los datos de entrenamiento, de tal forma que los datos de validación serán los que no sena de entrenamiento [-*entrena*].
+
+```{r}
+entrena <- createDataPartition(y = datos.limpios$PesoKgs, p = 0.70, list = FALSE, times = 1)
+# Datos entrenamiento
+datos.entrenamiento <- datos.limpios[entrena, ]  # [renglones, columna]
+# Datos validación
+datos.validacion <- datos.limpios[-entrena, ]
+```
+
+Mostrar los primeros 20 y últimos 20 registros de los datos de entrenamiento.
+
+Solo se muestran las variables de consecutivo *X*, *Name* y las dos variables de interés *Estatura* y *PesoKgs*.
+
+```{r}
+kable(head(datos.entrenamiento[, c('X', 'Name', 'Estatura', 'PesoKgs')], 20), caption = "Datos de entrenamiento, primeros 20 registros")
+kable(tail(datos.entrenamiento[, c('X', 'Name', 'Estatura', 'PesoKgs')], 20), caption = "Datos de entrenamiento, últimos 20 registros")
+```
+
+Mostrar los primeros 20 y últimos 20 registros de los datos de validación.
+
+```{r}
+
+```
+
+Visualizar dispersión de los datos de entrenamiento con las variables de interés *Estatura* y *PesoKgs.*
+
+```{r message=FALSE, warning=FALSE}
+g <- plot_ly(data = datos.entrenamiento, 
+             x = ~Estatura, 
+             y = ~PesoKgs) %>%
+layout(title = 'Jugadores FIFA. Dispersión de estatura en metros y peso en kilogramos.')
+  
+g
+```
+
+## Construir el modelo
+
+Con los datos de entrenamiento construir el modelo de regresión lineal simple.
+
+$$
+Y = a + bx
+$$
+
+ó
+
+$$
+Y = \beta_0 + \beta_1\cdot x
+$$
+
+De las dos variables de interés, *Estatura* y *PesoKgs* se determina que la variable predictora es *Estatura y el PesoKgs* es la variable de respuesta o también*:*
+
+-   *Estatura* es variable independiente y
+
+-   *PesoKgs* es variable dependiente
+
+Es decir, la variable *PesoKgs* depende de la *Estatura*
+
+```{r}
+modelo <- lm(data = datos.entrenamiento, formula = PesoKgs ~ Estatura)
+modelo
+```
+
+### Coeficientes del modelo
+
+Se determinan los valores de a y b de la fórmula $Y = a+bx$
+
+```{r}
+a <- modelo$coefficients[1]
+b <- modelo$coefficients[2]
+paste("Valor de la abcisa a es   : ", round(a, 6))
+paste("Valor de la pendiente b es: ", round(b, 6))
+```
+
+### Linea de tendencia del modelo
+
+Con la el valor de los valores de tendencia o valores ajustados del modelo se visualiza la recta de tendencia del modelo.
+
+La gráfica *g* se construye por partes, primero la dispersión, segundo la linea de tendencia, tercero se agrega el título, para luego solo mostrar la gráfica *g*.
+
+```{r}
+g <- plot_ly(data = datos.entrenamiento, 
+             x = ~Estatura, 
+             y = ~PesoKgs, 
+             name = 'Dispersión',
+             type = 'scatter', 
+             mode = 'markers', 
+             color = I('blue')) 
+g <- g %>% add_trace(x = ~Estatura,
+                     y = ~modelo$fitted.values, name = 'Tendencia', mode = 'lines+markers', color = I('red'))
+g <- g %>%
+layout(title = 'Jugadores FIFA. Dispersión y Tendencia de estatura en metros y peso en kilogramos.')
+g
+```
+
+## Predicciones
+
+Con los datos de validación, se hacen predicciones con la función *predict(),* luego se presentan algunas de las mismas prediccciones que pueden ser los mismos valores de *Estatura* o con nuevos valores calculadas manualmente usando la fórmula $Y = a + bx$.
+
+Se hace un *data.frame* de comparaciones con lo cual se presentan los valores reales y los valores de las predicciones. Se presenta solo las primeras 20 y últimas 20 predicciones.
+
+```{r}
+predicciones <- predict(object = modelo, newdata = datos.validacion)
+comparaciones <- data.frame(Estatura = datos.validacion$Estatura, PesoKgs = datos.validacion$PesoKgs, predicccion = predicciones)
+ 
+```
+
+```{r}
+ kable(x = head(comparaciones, 20), caption = "Predicciones")
+```
+
+```{r}
+  kable(x = tail(comparaciones, 20), caption = "Predicciones")
+```
+
+```{r}
+x <- c(1.70, 1.80, 1.90)
+Y = a + b * x
+Y 
+```
+
+## Evaluación del modelo
+
+-   ¿Que tan bien predice el modelo?
+
+-   ¿Es bueno el modelo de regresión lineal simple ?
+
+-   ¿Cuáles estadísticos hay que calcular e identificar para evaluar el modelo?
+
+```{r}
+summary(modelo)
+```
+
+### Valores residuales
+
+Es la diferencia entre los valores reales y los valores de tendencia. Con estos valores residuales se pude calcular el Error cuadrático medio y la raiz del mismo par interpretar que tan lejos son los valores de predicción con respecto a los valores de tendencia.
+
+```{r}
+n <- nrow(datos.entrenamiento)
+rmse <- sqrt(sum(modelo$residuals ^ 2) / n) 
+rmse
+```
+
+### Error Cuadrático Medio (RMSE)
+
+La raiz del *Error Cuadrático Medio (RMSE)* es una métrica que dice qué tan lejos están los valores predichos de los valores observados o reales en un análisis de regresión, en promedio. Se calcula como:
+
+$$
+RMSE = \sqrt{\frac{\sum(predicho_i - real_i)^{2}}{n}}
+$$
+
+RMSE es una forma útil de ver qué tan bien un modelo de regresión puede ajustarse a un conjunto de datos.
+
+Cuanto mayor sea el RMSE, mayor será la diferencia entre los valores predichos y reales, lo que significa que peor se ajusta un modelo de regresión a los datos. Por el contrario, cuanto más pequeño sea el RMSE, mejor podrá un modelo ajustar los datos.
+
+Usando el *data.frame comparaciones* que son las predicciones de los datos de validación previamente construído se determina el RMSE manualmente.
+
+```{r}
+n <- nrow(comparaciones)
+rmse1 <- sqrt(sum((comparaciones$PesoKgs - comparaciones$predicccion)^2) / n)
+rmse1
+```
+
+Se puede usar la función *rmse()* de la librería *Metrics*
+
+```{r}
+rmse2 <- rmse(actual = comparaciones$PesoKgs, predicted = comparaciones$predicccion)
+rmse2
+```
+
+Usando la función *RMSE()* de la librería *caret*
+
+```{r}
+rmse3 <- RMSE(obs = comparaciones$PesoKgs, pred = comparaciones$predicccion)
+rmse3
+```
+
+En todos los cálculos el valor de *rmse* es de 4.631735, ¿que significa el valor de `r rmse3`?
+
+Con base en RMSE, se puede comparar dos modelos diferentes entre sí y poder identificar qué modelo se ajusta mejor a la predicción de los datos.
+
+### *Multiple R-squared*
+
+De acuerdo al estadístico *Multiple R-squared* con valor 0.5681, significa que la variable Estatura representa tan solo el 56.81% del valor del PesoKgs.
+
+El coeficiente de determinación identificado por expresión *R\^2* e identificado como *Multiple R-squared* determina la calidad del modelo para replicar los resultados y la proporción de variación de los resultados que puede explicarse por el modelo.
+
+Este valor *Multiple R-squared* es relativo al compararlo con un criterio inicial o con una métrica inicial. Por ejemplo, si al principio se hubiera establecido que el modelo se acepta si hay un 70% o mas el modelo se acepta, entonces bajo esta premisa tal vez el modelo no se acepta ya que *Multiple R-squared* es 0.56 que está por debajo del 70%.
+
+Sin embargo, si se hubiera establecido que se acepta con un valor por encima del 50%, entonces este modelo si se acepta ya que *Multiple R-squared* es 0.56 o 56%.
+
+### Variables estadísticamente significativas
+
+Se observan que las variables estadísticas tanto el coeficiente de intersección como la variable predictiva *Estatura* si son altamente y estadísticamente significativas por debajo del 0.001 o con un nivel de confianza mayor al 99.9%. Se observa con los '\*\*\*' en las variables.
+
+# Interpretación
+
+1.  **¿Que significado tiene el estadístico R Square para ambos modelos?**
+
+El coeficiente de determinación es un número entre 0 y 1 que mide qué tan bien un modelo estadístico predice un resultado.
+
+2.  **¿Que significado tiene la fórmula de mínimos cuadrados en el modelo de regresión lineal simple?**
+
+Es un método para estimar los coeficientes de las ecuaciones de regresión lineal que describen la relación entre una (o varias) variables independientes cuantitativas y una variable dependiente. Según el número de variables, podemos hacer una regresión simple.
+
+3.  **¿Cuáles son los valores de los coeficientes a y b para el modelo de regresión lineal simple?**
+
+El valor de la intersección y la pendiente calculada por el algoritmo de regresión lineal.
+
+-   Valor de a (interseccion): -67.50986539
+
+-   Valor de b (pendiente): 78.78539487
+
+4.  **¿Para qué sirven los datos de entrenamiento y los datos de validación?**
+
+Probar el modelo con los mismos datos con los que se entrenó dará lugar a un sobreajuste y un rendimiento deficiente en escenarios de la vida real.
+
+5.  **¿Cómo se puede predecir valores en ambos modelos?**
+
+Se puede hacer a mano usando regresion lineal, pero es mucho mas facil usar algo que ya lo tengla implementado como R, Python, o Excel. En este caso despues de determinar la interseccion y la pendiente es cuestion de remplazar el valor de X para predecir valores, con un margen de error.
+
+6.  **¿Qué diferencias y similitudes encuentran en la programación Python y R en ambos modelos?**
+
+En ambos lenguajes se tienen formas de realizar la regresion lineal de manera sencilla, pero en R creo que tiene mas informacion expuesta por defecto al hacer los modelos de regresion lineal.
+
+7.  **Para este conjunto de datos cual es el mejor modelo para realizar predicciones y porqué?**
+
+En este el modelo de regresion lineal simple hay mucha dispersion de los valores, habria que probarse si una funcion polinomial haria diferencia.
+
+## **Algunas apreciaciones personales para los cuatro casos**
+
+En este caso de analisis al usar tanto el leguaje R como Python, me fue mas fácil el uso de Pyhton, por sintaxis y por familiaridad al ya usarlo en varias otras materias, con lo que me fue mas sencillo realizar mis interpretacion de lo que se esta usando, a su vez que se facilita mucha lo creacion del caso al usar Jupyther para ir viendo lo resualtados en ese momento, pero tambien el conociemiento en python me ayudo a interpretar algunas situasiones en R.

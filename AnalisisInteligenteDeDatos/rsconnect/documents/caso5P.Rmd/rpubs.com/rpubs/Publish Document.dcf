@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/955120/a6ddc3fdcd0b4dd9b587fad32e348472
+bundleId: https://api.rpubs.com/api/v1/document/955120/a6ddc3fdcd0b4dd9b587fad32e348472
+url: http://rpubs.com/LuisAlbertoJS/955120
+when: 1665599534.55076
+lastSyncTime: 1665599534.55079
